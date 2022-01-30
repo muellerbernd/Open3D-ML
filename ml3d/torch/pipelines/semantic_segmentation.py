@@ -458,7 +458,7 @@ class SemanticSegmentation(BasePipeline):
 
             self.save_logs(writer, epoch)
 
-            if epoch % cfg.save_ckpt_freq == 0:
+            if cfg.save_ckpt_freq > 0 and epoch % cfg.save_ckpt_freq == 0:
                 self.save_ckpt(epoch)
 
     def get_batcher(self, device, split='training'):
