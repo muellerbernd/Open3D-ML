@@ -6,7 +6,7 @@ from ....datasets.utils import DataProcessing
 
 def filter_valid_label(scores, labels, num_classes, ignored_label_inds, device):
     """Loss functions for semantic segmentation."""
-    valid_scores = scores.reshape(-1, num_classes)
+    valid_scores = scores.reshape(-1, num_classes).to(device)
     valid_labels = labels.reshape(-1).to(device)
 
     ignored_bool = torch.zeros_like(valid_labels, dtype=torch.bool)
@@ -21,8 +21,8 @@ def filter_valid_label(scores, labels, num_classes, ignored_label_inds, device):
     valid_labels = torch.gather(valid_labels, 0, valid_idx)
 
     # Reduce label values in the range of logit shape
-    reducing_list = torch.arange(0, num_classes, dtype=torch.int64)
-    inserted_value = torch.zeros([1], dtype=torch.int64)
+    reducing_list = torch.arange(0, num_classes, dtype=torch.int64).to(device)
+    inserted_value = torch.zeros([1], dtype=torch.int64).to(device)
 
     for ign_label in ignored_label_inds:
         if ign_label >= 0:
