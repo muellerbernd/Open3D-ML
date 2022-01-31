@@ -238,7 +238,9 @@ class SemanticSegmentation(BasePipeline):
 
         self.dataset_split = test_dataset
 
-        self.load_ckpt(model.cfg.ckpt_path)
+        if cfg.load_last_ckpt:
+            print("load last checkpoint")
+            self.load_ckpt(model.cfg.ckpt_path)
 
         model.trans_point_sampler = test_sampler.get_point_sampler()
         self.curr_cloud_id = -1
@@ -431,7 +433,8 @@ class SemanticSegmentation(BasePipeline):
         self.optimizer, self.scheduler = model.get_optimizer(cfg)
 
         is_resume = model.cfg.get("is_resume", True)
-        self.load_ckpt(model.cfg.ckpt_path, is_resume=is_resume)
+        if cfg.load_last_ckpt:
+            self.load_ckpt(model.cfg.ckpt_path, is_resume=is_resume)
 
         dataset_name = dataset.name if dataset is not None else ""
         tensorboard_dir = join(
@@ -450,7 +453,13 @@ class SemanticSegmentation(BasePipeline):
 
         log.info("Started training")
 
-        for epoch in range(0, cfg.max_epoch + 1):
+        the_last_loss = 100
+        patience = 2
+        trigger_times = 0
+        do_early_stopping = False
+        epoch = 0
+        while epoch < cfg.max_epoch + 1 and not do_early_stopping:
+            # for epoch in range(0, cfg.max_epoch + 1) and not do_early_stopping:
 
             log.info(f"=== EPOCH {epoch:d}/{cfg.max_epoch:d} ===")
             model.train()
@@ -480,7 +489,8 @@ class SemanticSegmentation(BasePipeline):
 
                 self.metric_train.update(predict_scores, gt_labels)
 
-                self.losses.append(loss.cpu().item())
+                train_loss = loss.cpu().item()
+                self.losses.append(train_loss)
                 # Save only for the first pcd in batch
                 if "train" in record_summary and step == 0:
                     self.summary["train"] = self.get_3d_summary(
@@ -508,18 +518,36 @@ class SemanticSegmentation(BasePipeline):
                         continue
 
                     self.metric_val.update(predict_scores, gt_labels)
-
-                    self.valid_losses.append(loss.cpu().item())
+                    val_loss = loss.cpu().item()
+                    self.valid_losses.append(val_loss)
                     # Save only for the first batch
                     if "valid" in record_summary and step == 0:
                         self.summary["valid"] = self.get_3d_summary(
                             results, inputs["data"], epoch
                         )
+            # early stopping
+            current_loss = np.mean(np.array(self.valid_losses))
+            if current_loss > the_last_loss:
+                trigger_times += 1
+                print("trigger times:", trigger_times)
+
+                if trigger_times >= patience:
+                    print("Early stopping!")
+                    do_early_stopping = True
+                else:
+                    print("trigger times: 0")
+                    trigger_times = 0
+
+                the_last_loss = current_loss
+            # save only the best
+            else:
+                self.save_best_ckpt(epoch)
 
             self.save_logs(writer, epoch)
 
-            if cfg.save_ckpt_freq > 0 and epoch % cfg.save_ckpt_freq == 0:
-                self.save_ckpt(epoch)
+            epoch += 1
+            # if cfg.save_ckpt_freq > 0 and epoch % cfg.save_ckpt_freq == 0:
+            #     self.save_ckpt(epoch)
 
     def get_batcher(self, device, split="training"):
         """Get the batcher to be used based on the device and split."""
@@ -763,6 +791,21 @@ class SemanticSegmentation(BasePipeline):
                 scheduler_state_dict=self.scheduler.state_dict(),
             ),
             join(path_ckpt, f"ckpt_{epoch:05d}.pth"),
+        )
+        log.info(f"Epoch {epoch:3d}: save ckpt to {path_ckpt:s}")
+
+    def save_best_ckpt(self, epoch):
+        """Save a checkpoint at the passed epoch."""
+        path_ckpt = join(self.cfg.logs_dir, "checkpoint")
+        make_dir(path_ckpt)
+        torch.save(
+            dict(
+                epoch=epoch,
+                model_state_dict=self.model.state_dict(),
+                optimizer_state_dict=self.optimizer.state_dict(),
+                scheduler_state_dict=self.scheduler.state_dict(),
+            ),
+            join(path_ckpt, "my_model_best_loss.pth"),
         )
         log.info(f"Epoch {epoch:3d}: save ckpt to {path_ckpt:s}")
 
