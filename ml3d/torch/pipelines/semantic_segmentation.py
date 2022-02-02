@@ -18,6 +18,7 @@ from ..modules.losses import SemSegLoss, filter_valid_label
 from ..modules.metrics import SemSegMetric
 from ...utils import make_dir, LogRecord, PIPELINE, get_runid, code2md
 from ...datasets import InferenceDummySplit
+import random
 
 logging.setLogRecordFactory(LogRecord)
 logging.basicConfig(
@@ -25,6 +26,17 @@ logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(module)s - %(message)s",
 )
 log = logging.getLogger(__name__)
+
+
+def seed_worker(worker_id):
+    # worker_seed = torch.initial_seed() % 2**32
+    worker_seed = torch.initial_seed()
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
+g = torch.Generator()
+g.manual_seed(0)
 
 
 class SemanticSegmentation(BasePipeline):
@@ -402,9 +414,11 @@ class SemanticSegmentation(BasePipeline):
             num_workers=cfg.get("num_workers", 2),
             pin_memory=cfg.get("pin_memory", True),
             collate_fn=self.batcher.collate_fn,
-            worker_init_fn=lambda x: np.random.seed(
-                x + np.uint32(torch.utils.data.get_worker_info().seed)
-            ),
+            # worker_init_fn=lambda x: np.random.seed(
+            #     x + np.uint32(torch.utils.data.get_worker_info().seed)
+            # ),
+            worker_init_fn=seed_worker,
+            generator=g,
         )  # numpy expects np.uint32, whereas torch returns np.uint64.
 
         valid_dataset = dataset.get_split("validation")
@@ -425,9 +439,11 @@ class SemanticSegmentation(BasePipeline):
             num_workers=cfg.get("num_workers", 2),
             pin_memory=cfg.get("pin_memory", True),
             collate_fn=self.batcher.collate_fn,
-            worker_init_fn=lambda x: np.random.seed(
-                x + np.uint32(torch.utils.data.get_worker_info().seed)
-            ),
+            # worker_init_fn=lambda x: np.random.seed(
+            #     x + np.uint32(torch.utils.data.get_worker_info().seed)
+            # ),
+            worker_init_fn=seed_worker,
+            generator=g,
         )
 
         self.optimizer, self.scheduler = model.get_optimizer(cfg)
@@ -453,7 +469,7 @@ class SemanticSegmentation(BasePipeline):
 
         log.info("Started training")
 
-        the_last_loss = 100
+        the_last_loss = np.iinfo(np.int32).max
         patience = 2
         trigger_times = 0
         do_early_stopping = False
