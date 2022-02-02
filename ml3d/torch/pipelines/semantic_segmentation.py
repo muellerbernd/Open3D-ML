@@ -192,7 +192,7 @@ class SemanticSegmentation(BasePipeline):
         }
 
         metric = SemSegMetric()
-
+        print("model.cfg.ignored_label_inds", model.cfg.ignored_label_inds)
         valid_scores, valid_labels = filter_valid_label(
             torch.tensor(inference_result["predict_scores"]),
             torch.tensor(data["label"]),
