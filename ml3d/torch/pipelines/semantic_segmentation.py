@@ -29,8 +29,8 @@ log = logging.getLogger(__name__)
 
 
 def seed_worker(worker_id):
-    # worker_seed = torch.initial_seed() % 2**32
-    worker_seed = torch.initial_seed()
+    worker_seed = torch.initial_seed() % 2**32
+    # worker_seed = torch.initial_seed()
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
@@ -203,9 +203,9 @@ class SemanticSegmentation(BasePipeline):
 
         metric.update(valid_scores, valid_labels)
         print("valid scores", valid_scores, "valid labels", valid_labels)
-        print("#0", np.count_nonzero(valid_labels == 0))
-        print("#1", np.count_nonzero(valid_labels == 1))
-        print("#2", np.count_nonzero(valid_labels == 2))
+        print("#0", np.count_nonzero(valid_labels.cpu() == 0))
+        print("#1", np.count_nonzero(valid_labels.cpu() == 1))
+        print("#2", np.count_nonzero(valid_labels.cpu() == 2))
 
         log.info(f"Accuracy : {metric.acc()}")
         log.info(f"IoU : {metric.iou()}")
