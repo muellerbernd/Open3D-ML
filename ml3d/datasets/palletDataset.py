@@ -207,11 +207,11 @@ class PalletDataSplit(BaseDatasetSplit):
         labels = np.array(data[:, 3], dtype=np.int32)
         feat = data[:, 4:] if data.shape[1] > 4 else None
         color = np.array(data[:, 4 : 4 + 3], dtype=np.float32)
-        print("get data start")
-        print("#0", np.count_nonzero(labels == 0))
-        print("#1", np.count_nonzero(labels == 1))
-        print("#2", np.count_nonzero(labels == 2))
-        print("get data end")
+        # print("get data start")
+        # print("#0", np.count_nonzero(labels == 0))
+        # print("#1", np.count_nonzero(labels == 1))
+        # print("#2", np.count_nonzero(labels == 2))
+        # print("get data end")
 
         # else:
         #     feat = (
