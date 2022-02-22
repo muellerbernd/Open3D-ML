@@ -215,6 +215,7 @@ class PalletDataSplit(BaseDatasetSplit):
         # if self.split != "test":
         labels = np.array(data[:, 3], dtype=np.int32)
         feat = data[:, 4:] if data.shape[1] > 4 else None
+        # feat = None
         color = np.array(data[:, 4 : 4 + 3], dtype=np.float32)
         # map color range to [0,255]
         color = scale_range(color, min=0, max=255)

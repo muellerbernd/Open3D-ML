@@ -444,7 +444,6 @@ class SemanticSegmentation(BasePipeline):
         self.optimizer, self.scheduler = model.get_optimizer(cfg)
 
         is_resume = model.cfg.get("is_resume", True)
-        self.load_ckpt(model.cfg.ckpt_path, is_resume=is_resume)
         if cfg.load_last_ckpt:
             self.load_ckpt(model.cfg.ckpt_path, is_resume=is_resume)
 
