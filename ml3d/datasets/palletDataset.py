@@ -68,9 +68,18 @@ class PalletDataset(BaseDataset):
         self.val_dir = str(Path(dataset_path) / "val")
         self.test_dir = str(Path(dataset_path) / "test")
 
-        self.train_files = [f for f in glob.glob(self.train_dir + "/*.npy")]
-        self.val_files = [f for f in glob.glob(self.val_dir + "/*.npy")]
-        self.test_files = [f for f in glob.glob(self.test_dir + "/*.npy")]
+        if cfg.use_simple_scans:
+            self.train_files = [
+                f for f in glob.glob(self.train_dir + "/simple_scan*.npy")
+            ]
+            self.val_files = [f for f in glob.glob(self.val_dir + "/simple_scan*.npy")]
+            self.test_files = [
+                f for f in glob.glob(self.test_dir + "/simple_scan*.npy")
+            ]
+        else:
+            self.train_files = [f for f in glob.glob(self.train_dir + "/*.npy")]
+            self.val_files = [f for f in glob.glob(self.val_dir + "/*.npy")]
+            self.test_files = [f for f in glob.glob(self.test_dir + "/*.npy")]
 
     @staticmethod
     def get_label_to_names():
@@ -206,12 +215,20 @@ class PalletDataSplit(BaseDatasetSplit):
         # if self.split != "test":
         labels = np.array(data[:, 3], dtype=np.int32)
         feat = data[:, 4:] if data.shape[1] > 4 else None
-        color = np.array(data[:, 4 : 4 + 3], dtype=np.float32)
         print("get data start")
         print("#0", np.count_nonzero(labels == 0))
         print("#1", np.count_nonzero(labels == 1))
         print("#2", np.count_nonzero(labels == 2))
         print("get data end")
+        # feat = None
+        color = np.array(data[:, 4 : 4 + 3], dtype=np.float32)
+        # map color range to [0,255]
+        color = scale_range(color, min=0, max=255)
+        # print("get data start")
+        # print("#0", np.count_nonzero(labels == 0))
+        # print("#1", np.count_nonzero(labels == 1))
+        # print("#2", np.count_nonzero(labels == 2))
+        # print("get data end")
 
         # else:
         #     feat = (
@@ -232,6 +249,13 @@ class PalletDataSplit(BaseDatasetSplit):
         attr = {"name": name, "path": str(pc_path), "split": self.split}
 
         return attr
+
+
+def scale_range(input, min, max):
+    input += -(np.min(input))
+    input /= np.max(input) / (max - min)
+    input += min
+    return input
 
 
 DATASET._register_module(PalletDataset)

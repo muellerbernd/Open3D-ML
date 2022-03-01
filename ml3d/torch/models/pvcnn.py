@@ -26,7 +26,7 @@ class TrilinearDevoxelization(Function):
             features: FloatTensor[B, C, R, R, R]
             resolution: int, the voxel resolution.
             is_training: bool, training mode.
-        
+
         Returns:
             torch.FloatTensor: devoxelized features (B, C, N)
 
@@ -290,7 +290,7 @@ class PVCNN(BaseModel):
             results: Output of the model.
             inputs: Input of the model.
             device: device(cpu or cuda).
-        
+
         Returns:
             Returns loss, labels and scores.
         """
